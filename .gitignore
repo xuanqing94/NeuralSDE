@@ -1,0 +1,4 @@
+log_*.txt
+*.pth
+*.log
+__pycache__
