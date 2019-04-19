@@ -29,11 +29,11 @@ def sdeint_euler(f, g, dif_g, t, h, x0, mid_state=None):
 
     z = torch.randn_like(x0).to(x0)
     for step in range(N):
-        z.normal_()
-        x = x + f(tt, x) * h_real + g(tt, x) * z.detach() * root_h
-        tt += h
         if mid_state is not None:
             mid_state.append(x.detach().clone())
+        z.normal_()
+        x = x + f(tt, x) * h_real + g(tt, x) * z.detach() * root_h
+        tt += h_real
     return x
 
 def odeint_euler(f, g, dif_g, t, h, x0):
@@ -61,5 +61,5 @@ def odeint_euler(f, g, dif_g, t, h, x0):
     for step in range(N):
         #z = torch.randn_like(x0).to(x0)
         x = x + f(tt, x) * h_real
-        tt += h
+        tt += h_real
     return x

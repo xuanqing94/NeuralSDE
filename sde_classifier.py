@@ -12,7 +12,7 @@ from models.sde_model import SdeClassifier
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type=str, choices=['resnet', 'odenet'], default='odenet')
 parser.add_argument('--data', type=str, choices=['cifar10', 'mnist'], default='mnist')
-parser.add_argument('--sigma', type=float, default=1.0)
+parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False, choices=[True, False])
 parser.add_argument('--lr', type=float, default=0.1)

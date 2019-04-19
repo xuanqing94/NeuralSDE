@@ -1,15 +1,26 @@
 #!/usr/bin/env python
 
+import argparse
 import torch
 import torchvision
 import torchvision.transforms as transforms
 from models.sde_model import SdeClassifier
 from attacker.pgd import L2_PGD
+import torch.backends.cudnn as cudnn
+cudnn.benchmark = True
 
-data = 'cifar10'
-in_nc = 3
-sigma = 0.0
-test_sigma = 0.0
+parser = argparse.ArgumentParser()
+parser.add_argument('--data', type=str, choices=['cifar10', 'mnist'], default='mnist')
+parser.add_argument('--sigma', type=float, default=0.0)
+parser.add_argument('--test_sigma', type=float, default=0.0)
+parser.add_argument('--step_size', type=float, default=0.2)
+parser.add_argument('--n_ensemble', type=int, default=2000)
+args = parser.parse_args()
+
+data = args.data
+in_nc = 3 if args.data == 'cifar10' else 1
+sigma = args.sigma
+test_sigma = args.test_sigma
 
 def get_middle_states(net, x, n_try):
     avg_result = []
@@ -42,7 +53,7 @@ def get_snr(states1, states2):
 
 if __name__ == "__main__":
     # load model
-    net = SdeClassifier(in_nc, test_sigma, None, 0.02)
+    net = SdeClassifier(in_nc, test_sigma, None, args.step_size)
     f = f'./ckpt/sde_{data}_{sigma}.pth'
     net.load_state_dict(torch.load(f))
     net.cuda()
@@ -54,21 +65,19 @@ if __name__ == "__main__":
         transform_test = transforms.Compose([
             transforms.ToTensor(),
         ])
-        testset = torchvision.datasets.CIFAR10(root='~/data/cifar10-py', train=False, download=True, transform=transform_test)
+        testset = torchvision.datasets.CIFAR10(root='~/data/cifar10-py', train=False, download=False, transform=transform_test)
     
     for x, y in testset:
         x, y = x.unsqueeze(0).cuda(), torch.LongTensor([y]).cuda()
-        # calculate the mid states for original input
-        mid_state_original = get_middle_states(net, x, 100)
-        #net.set_mid_state(mid_state_original)
-        #with torch.no_grad():
-        #    out = net(x)
+        # calculate the mid states on original input
+        mid_state_original = get_middle_states(net, x, args.n_ensemble)
         # get adversarial example from (x, y)
-        x_adv = L2_PGD(x, y, net, 1000, 0.1)
-        mid_state_adv = get_middle_states(net, x_adv, 100)
-        #net.set_mid_state(mid_state_adv)
-        #with torch.no_grad():
-        #    out2 = net(x_adv)
+        x_adv = L2_PGD(x, y, net, 40, 0.1)
+        # calculate the mid states on adversarial input
+        mid_state_adv = get_middle_states(net, x_adv, args.n_ensemble)
+        # caluclate relative change of middle states
         snr = get_snr(mid_state_original, mid_state_adv)
         print(snr)
+        # we only calculate one input
+        # TODO maybe average over multiple inputs?
         break

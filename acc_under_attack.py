@@ -27,7 +27,8 @@ parser.add_argument('--data', type=str, required=True)
 parser.add_argument('--n_ensemble', type=int, required=True)
 parser.add_argument('--steps', type=int, required=True)
 parser.add_argument('--max_norm', type=str, required=True)
-parser.add_argument('--sigma', type=float, default=1.0)
+parser.add_argument('--sigma', type=float, default=0.0)
+parser.add_argument('--test_sigma', type=float, default=0.0)
 parser.add_argument('--batch_size', type=int, default=200)
 
 opt = parser.parse_args()
@@ -65,14 +66,13 @@ if opt.model == 'ode':
     net = OdeClassifier(in_nc)
     f = f'./ckpt/ode_{opt.data}.pth'
 elif opt.model == 'sde':
-    net = SdeClassifier(in_nc, opt.sigma, mid_state=None)
+    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None)
     f = f'./ckpt/sde_{opt.data}_{opt.sigma}.pth'
 else:
     raise ValueError('invalid opt.model')
 
 print(f"Loading model from file {f}")
 net.load_state_dict(torch.load(f))
-
 net.cuda()
 net.eval() # must set to evaluation mode
 loss_f = nn.CrossEntropyLoss()
@@ -88,10 +88,16 @@ def ensemble_inference(x_in):
         answer = torch.max(prob, dim=1)[1]
     return answer
 
-def distance(x_adv, x):
+def linf_distance(x_adv, x):
     diff = (x_adv - x).view(x.size(0), -1)
     out = torch.mean(torch.max(torch.abs(diff), 1)[0]).item()
     return out
+
+def l2_distance(x_adv, x):
+    diff = (x_adv - x).view(x.size(0), -1)
+    out = torch.mean(torch.norm(diff, dim=1)).item()
+    return out
+
 
 # Iterate over test set
 print('#norm, accuracy')
@@ -107,7 +113,7 @@ for eps in opt.max_norm:
         pred = ensemble_inference(x_adv)
         correct += torch.sum(pred.eq(y)).item()
         total += y.numel()
-        distortion += distance(x_adv, x)
+        distortion += l2_distance(x_adv, x)
         batch += 1
         if it >= max_iter:
             break

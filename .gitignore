@@ -1,3 +1,5 @@
+/ffjord
+/results
 log_*.txt
 *.pth
 *.log
