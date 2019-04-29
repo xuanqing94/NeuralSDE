@@ -13,7 +13,6 @@ import torchvision
 import torchvision.transforms as transforms
 # models
 from models.sde_model import SdeClassifier
-from models.ode_model import OdeClassifier
 # adversarial algorithm
 from attacker.pgd import Linf_PGD, L2_PGD
 
@@ -30,7 +29,7 @@ parser.add_argument('--max_norm', type=str, required=True)
 parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--test_sigma', type=float, default=0.0)
 parser.add_argument('--batch_size', type=int, default=200)
-
+parser.add_argument('--noise_type', type=str, required=True)
 opt = parser.parse_args()
 
 opt.max_norm = [float(s) for s in opt.max_norm.split(',')]
@@ -53,7 +52,7 @@ elif opt.data == "mnist":
     nclass = 10
     img_width = 28
     in_nc = 1
-    transfrom_test = transforms.Compose([
+    transform_test = transforms.Compose([
         transforms.ToTensor(),
     ])
     testset = torchvision.datasets.MNIST(root='/home/luinx/data/mnist', train=False, download=True, transform=transform_test)
@@ -66,8 +65,8 @@ if opt.model == 'ode':
     net = OdeClassifier(in_nc)
     f = f'./ckpt/ode_{opt.data}.pth'
 elif opt.model == 'sde':
-    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None)
-    f = f'./ckpt/sde_{opt.data}_{opt.sigma}.pth'
+    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type)
+    f = f'./ckpt/sde_{opt.data}_{opt.sigma}_{opt.noise_type}.pth'
 else:
     raise ValueError('invalid opt.model')
 

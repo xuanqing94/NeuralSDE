@@ -1,4 +1,5 @@
 """ Train a flow model based on SDE solver """
+import os
 import math
 import argparse
 import torch
@@ -19,7 +20,8 @@ parser.add_argument("--strides", type=str, default="2,2,1,-2,-2")
 parser.add_argument("--num_blocks", type=int, default=1, help='Number of stacked CNFs.')
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--resume", type=str, default="")
-parser.add_argument("--out_dir", type=str, default="./img")
+parser.add_argument("--img_dir", type=str, default="./img")
+parser.add_argument("--ckpt", type=str, default="./ckpt/flow_model.ckpt")
 parser.add_argument("--time_length", type=float, default=1.0)
 parser.add_argument("--lr", type=float, default=0.1)
 args = parser.parse_args()
@@ -54,6 +56,21 @@ def get_data():
         train_data = CIFAR10(root="~/data/cifar10-py", train=True, transform=tsf_tr, download=False)
         test_data = CIFAR10(root="~/data/cifar10-py", train=False, transform=tsf_te, download=False)
         data_shape = (3, 32, 32)
+    elif args.data == "mnist":
+        tsf_tr = Compose([
+            Resize(28),
+            RandomHorizontalFlip(),
+            ToTensor(),
+            add_noise,
+        ])
+        tsf_te = Compose([
+            Resize(28),
+            ToTensor(),
+            add_noise,
+        ])
+        train_data = MNIST(root="~/data/mnist", train=True, transform=tsf_tr, download=False)
+        test_data = MNIST(root="~/data/mnist", train=False, transform=tsf_te, download=False)
+        data_shape = (1, 28, 28)
     else:
         raise ValueError("Dataset not supported")
 
@@ -114,9 +131,6 @@ if __name__ == "__main__":
                 loss.backward()
                 opt.step()
                 print(f"Iter {it}, loss: {loss.item()}")
-                if (it + 1) % 20 == 0:
-                    break
-            break
             # testing epoch
             total_loss = 0
             for img, _ in test_loader:
@@ -127,8 +141,9 @@ if __name__ == "__main__":
             total_loss /= len(test_loader)
             print(f"[counter/np.sum(epochs)] Test loss: {total_loss}")
             # visualize
-            out_f = os.path.join(args.img_dir, f"fig_{counter},jpg")
+            out_f = os.path.join(args.img_dir, f"fig_{counter}.jpg")
             with torch.no_grad():
                 samples = model(fixed_z, reverse=True).view(-1, *data_shape)
             save_image(samples, out_f, nrow=10)
-        break
+            # save model
+            torch.save(model.state_dict(), args.ckpt)

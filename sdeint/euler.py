@@ -28,11 +28,12 @@ def sdeint_euler(f, g, dif_g, t, h, x0, mid_state=None):
     x = x0
 
     z = torch.randn_like(x0).to(x0)
+    z.requires_grad = False
     for step in range(N):
         if mid_state is not None:
             mid_state.append(x.detach().clone())
-        z.normal_()
-        x = x + f(tt, x) * h_real + g(tt, x) * z.detach() * root_h
+        tmp = root_h * z.normal_()
+        x = x + f(tt, x) * h_real + g(tt, x) * tmp
         tt += h_real
     return x
 

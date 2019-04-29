@@ -13,10 +13,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--network', type=str, choices=['resnet', 'odenet'], default='odenet')
 parser.add_argument('--data', type=str, choices=['cifar10', 'mnist'], default='mnist')
 parser.add_argument('--sigma', type=float, default=0.0)
+parser.add_argument('--epochs', type=str, default="80,60,40,20")
 parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False, choices=[True, False])
 parser.add_argument('--lr', type=float, default=0.1)
 parser.add_argument('--save', type=str, default='./experiment1')
+parser.add_argument('--noise_type', type=str, default='additive')
 args = parser.parse_args()
 
 from sdeint.euler import sdeint_euler
@@ -94,14 +96,14 @@ def test_one_epoch(loader, model, optimizer, loss_f):
 
 if __name__ == '__main__':
     if args.data == "cifar10":
-        model = SdeClassifier(in_nc=3, sigma=args.sigma, mid_state=None).cuda()
+        model = SdeClassifier(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_cifar_loaders()
     elif args.data == "mnist":
-        model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None).cuda()
+        model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_mnist_loaders()
 
     loss = nn.CrossEntropyLoss()
-    epochs = [80, 40, 40, 20]
+    epochs = [int(k) for k in args.epochs.split(',')]
     epoch_counter = 0
     for epoch in epochs:
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr,
@@ -114,4 +116,4 @@ if __name__ == '__main__':
             print(f"[Epoch={epoch_counter}] Train: {train_acc:.3f}, "
                     f"Test: {test_acc:.3f}")
             # save model
-            torch.save(model.state_dict(), f"./ckpt/sde_{args.data}_{args.sigma}.pth")
+            torch.save(model.state_dict(), f"./ckpt/sde_{args.data}_{args.sigma}_{args.noise_type}.pth")

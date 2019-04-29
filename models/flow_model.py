@@ -106,7 +106,7 @@ class FlowNet(nn.Module):
         return self.sigma_h, self.sigma_logp
 
 class CNF(nn.Module):
-    def __init__(self, flow_net, T=1.0, h=0.02):
+    def __init__(self, flow_net, T=1.0, h=0.03):
         super(CNF, self).__init__()
         self.end_time = T
         self.flow_net = flow_net
@@ -125,7 +125,7 @@ class CNF(nn.Module):
         self.flow_net.reset()
         # integration
         # switch methods for debugging purpose
-        if True:
+        if False:
             z_t, logpz_t = sdeint_joint_milstein(self.flow_net.forward, self.flow_net.diffusion, self.flow_net.dif_g, t0, t1, self.h, (z, _logpz))
         else:
             state_t = odeint(self.flow_net, (z, _logpz), torch.tensor([t0, t1]).to(z), atol=1.0e-5, rtol=1.0e-5)

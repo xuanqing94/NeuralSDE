@@ -15,6 +15,7 @@ parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--test_sigma', type=float, default=0.0)
 parser.add_argument('--step_size', type=float, default=0.2)
 parser.add_argument('--n_ensemble', type=int, default=2000)
+parser.add_argument('--noise_type', type=str, required=True)
 args = parser.parse_args()
 
 data = args.data
@@ -53,7 +54,7 @@ def get_snr(states1, states2):
 
 if __name__ == "__main__":
     # load model
-    net = SdeClassifier(in_nc, test_sigma, None, args.step_size)
+    net = SdeClassifier(in_nc, test_sigma, None, args.step_size, args.noise_type)
     f = f'./ckpt/sde_{data}_{sigma}.pth'
     net.load_state_dict(torch.load(f))
     net.cuda()

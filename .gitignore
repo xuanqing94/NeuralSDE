@@ -1,5 +1,9 @@
+/ckpt
 /ffjord
 /results
+/img
+/texfig
+toy*
 log_*.txt
 *.pth
 *.log

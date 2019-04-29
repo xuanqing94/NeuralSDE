@@ -13,21 +13,28 @@ class SDEfunc(nn.Module):
     def __init__(self, dim, sigma):
         super(SDEfunc, self).__init__()
         self.norm1 = norm(dim)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu1 = nn.ReLU(inplace=True)
         self.conv1 = ConcatConv2d(dim, dim, 3, 1, 1)
         self.norm2 = norm(dim)
+        self.relu2 = nn.ReLU(inplace=True)
         self.conv2 = ConcatConv2d(dim, dim, 3, 1, 1)
         self.norm3 = norm(dim)
+        self.relu3 = nn.ReLU(inplace=True)
+        self.conv3 = ConcatConv2d(dim, dim, 3, 1, 1)
+        self.norm4 = norm(dim)
         self.sigma = sigma
 
     def forward(self, t, x):
         out = self.norm1(x)
-        out = self.relu(out)
+        out = self.relu1(out)
         out = self.conv1(t, out)
         out = self.norm2(out)
-        out = self.relu(out)
+        out = self.relu2(out)
         out = self.conv2(t, out)
         out = self.norm3(out)
+        out = self.relu3(out)
+        out = self.conv3(t, out)
+        out = self.norm4(out)
         return out
 
     def diffusion(self, t, x):
@@ -100,7 +107,7 @@ class Flatten(nn.Module):
         return x.view(-1, shape)
 
 class SdeClassifier(nn.Module):
-    def __init__(self, in_nc, sigma, mid_state, grid=0.1):
+    def __init__(self, in_nc, sigma, mid_state, grid=0.1, noise_type="additive"):
         super(SdeClassifier, self).__init__()
         self.mid_state = mid_state
         self.downsampling_layers = [
@@ -112,7 +119,8 @@ class SdeClassifier(nn.Module):
             #nn.ReLU(inplace=True),
             #nn.Conv2d(64, 64, 4, 2, 1),
         ]
-        self.feature_layers = [SDEBlock(SDEfunc2(64, sigma), self.mid_state, grid)]
+        sde_fn = SDEfunc2 if noise_type == "additive" else SDEfunc
+        self.feature_layers = [SDEBlock(sde_fn(64, sigma), self.mid_state, grid)]
         self.fc_layers = [norm(64), nn.ReLU(inplace=True),
                 nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(64, 10)]
         self.model = nn.Sequential(*self.downsampling_layers, *self.feature_layers,
