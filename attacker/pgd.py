@@ -2,24 +2,26 @@ import math
 import torch
 import torch.nn.functional as F
 from .linf_sgd import Linf_SGD
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 
 # performs Linf-constraint PGD attack w/o noise
 # @epsilon: radius of Linf-norm ball
-def Linf_PGD(x_in, y_true, net, steps, eps):
+def Linf_PGD(x_in, y_true, net, steps, eps, num_avg):
     if eps == 0:
         return x_in
     training = net.training
     if training:
         net.eval()
     x_adv = x_in.clone().requires_grad_()
-    optimizer = Linf_SGD([x_adv], lr=0.007)
+    optimizer = Linf_SGD([x_adv], lr=0.007 / num_avg)
     for _ in range(steps):
         optimizer.zero_grad()
         net.zero_grad()
-        out = net(x_adv)
-        loss = -F.cross_entropy(out, y_true)
-        loss.backward()
+        for _ in range(num_avg):
+            # accumulate gradients for minibatch gd
+            out = net(x_adv)
+            loss = -F.cross_entropy(out, y_true)
+            loss.backward()
         optimizer.step()
         diff = x_adv - x_in
         diff.clamp_(-eps, eps)
@@ -32,7 +34,7 @@ def Linf_PGD(x_in, y_true, net, steps, eps):
 
 
 
-def L2_PGD(x_in, y_true, net, steps, eps):
+def L2_PGD(x_in, y_true, net, steps, eps, num_avg):
     if eps == 0:
         return x_in
 
@@ -41,15 +43,17 @@ def L2_PGD(x_in, y_true, net, steps, eps):
         net.eval()
 
     x_adv = x_in.clone().requires_grad_()
-    optimizer = Adam([x_adv], lr=0.01)
+    lr = 1.5 * eps / steps / num_avg
+    optimizer = Adam([x_adv], lr=lr)
     eps = torch.tensor(eps).to(x_in)
 
-    for _ in range(steps):
+    for step in range(steps):
         optimizer.zero_grad()
         net.zero_grad()
-        out = net(x_adv)
-        loss = -F.cross_entropy(out, y_true)
-        loss.backward()
+        for _ in range(num_avg):
+            out = net(x_adv)
+            loss = -F.cross_entropy(out, y_true)
+            loss.backward()
         optimizer.step()
         diff = x_adv - x_in
         norm = torch.sqrt(torch.sum(diff * diff, (1,2,3)))

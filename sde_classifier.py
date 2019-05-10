@@ -63,6 +63,27 @@ def get_cifar_loaders():
     )
     return train_loader, test_loader
 
+def get_tiny_imagenet_loaders():
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(64, padding=6),
+        transforms.ToTensor(),
+    ])
+    transform_test = transform.Compose([
+        transforms.ToTensor(),
+    ])
+    train_loader = DataLoader(
+        datasets.ImageFolder(root='~/data/Tiny-ImageNet/train', 
+            transform=transform_train),
+        batch_size=128, shuffle=True, num_workers=2, drop_last=True
+    )
+    test_loader = DataLoader(
+        datasets.ImageFolder(root='~/data/Tiny-ImageNet/val',
+            transform=transform_test),
+        batch_size=128, shuffle=False, num_workers=2, drop_last=True
+    )
+    return train_loader, test_loader
+
+
 def train_one_epoch(loader, model, optimizer, loss_f):
     model.train()
     total = 0
@@ -101,7 +122,11 @@ if __name__ == '__main__':
     elif args.data == "mnist":
         model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_mnist_loaders()
-
+    elif args.data == "tiny-imagenet":
+        model = SdeClassifier(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        train_loader, test_loader = get_tiny_imagenet_loaders()
+    else:
+        raise ValueError
     loss = nn.CrossEntropyLoss()
     epochs = [int(k) for k in args.epochs.split(',')]
     epoch_counter = 0

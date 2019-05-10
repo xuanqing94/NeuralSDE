@@ -2,12 +2,12 @@
 
 #./sde_classifier.py --data cifar10 --sigma 0.5 > ./log_sde_cifar10_0.5.txt
 
-device=0
-for s in 1.4 1.6 1.8
+device=1
+for s in 0.5 0.6 0.7 0.8 0.9
 do
 	data=cifar10
 	sigma=$s
-	noise_type=multiplicative
+	noise_type=dropout
 	#epochs=20,20,10
 	epochs=40,40,20,20
 	echo Training with sigma=${sigma}

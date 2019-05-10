@@ -28,6 +28,7 @@ parser.add_argument('--steps', type=int, required=True)
 parser.add_argument('--max_norm', type=str, required=True)
 parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--test_sigma', type=float, default=0.0)
+parser.add_argument('--num_avg', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=200)
 parser.add_argument('--noise_type', type=str, required=True)
 opt = parser.parse_args()
@@ -108,7 +109,7 @@ for eps in opt.max_norm:
     batch = 0
     for it, (x, y) in enumerate(testloader):
         x, y = x.cuda(), y.cuda()
-        x_adv = attack_f(x, y, net, opt.steps, eps)
+        x_adv = attack_f(x, y, net, opt.steps, eps, opt.num_avg)
         pred = ensemble_inference(x_adv)
         correct += torch.sum(pred.eq(y)).item()
         total += y.numel()
