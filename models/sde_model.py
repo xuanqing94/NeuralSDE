@@ -126,6 +126,7 @@ class SDEBlock(nn.Module):
         super(SDEBlock, self).__init__()
         self.sdefunc = sdefunc
         self.T = 1.0
+        #self.T = 0.1
         self.grid = grid
         self.mid_state = mid_state
 
@@ -169,6 +170,41 @@ class SdeClassifier(nn.Module):
                 nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(64, 10)]
         self.model = nn.Sequential(*self.downsampling_layers, *self.feature_layers,
                 *self.fc_layers)
+
+    def set_mid_state(self, mid_state):
+        self.feature_layers[0].mid_state = mid_state
+   
+    def forward(self, x):
+        return self.model(x)
+
+class SdeClassifier_big(nn.Module):
+    def __init__(self, in_nc, sigma, mid_state, grid=0.1, noise_type="additive"):
+        super(SdeClassifier_big, self).__init__()
+        self.mid_state = mid_state
+        self.downsampling_layers = [
+            nn.Conv2d(in_nc, 64, 3, 1, 1),
+            norm(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, 4, 2, 1),
+            norm(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, 4, 2, 1),
+        ]
+        if noise_type == "multiplicative":
+            sde_fn = SDEfunc
+        elif noise_type == "additive":
+            sde_fn = SDEfunc2
+        elif noise_type == "dropout":
+            sde_fn = SDEfunc3
+        else:
+            raise ValueError
+        self.feature_layers = [SDEBlock(sde_fn(256, sigma), self.mid_state, grid)]
+        self.fc_layers = [norm(256), nn.ReLU(inplace=True),
+                nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(256, 200)]
+        self.model = nn.Sequential(*self.downsampling_layers, *self.feature_layers,
+                *self.fc_layers)
+        #self.model = nn.Sequential(*self.downsampling_layers,
+        #        *self.fc_layers)
 
     def set_mid_state(self, mid_state):
         self.feature_layers[0].mid_state = mid_state

@@ -7,11 +7,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from models.sde_model import SdeClassifier
+from models.sde_model import SdeClassifier, SdeClassifier_big
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type=str, choices=['resnet', 'odenet'], default='odenet')
-parser.add_argument('--data', type=str, choices=['cifar10', 'mnist'], default='mnist')
+parser.add_argument('--data', type=str, choices=['cifar10', 'mnist', 'tiny-imagenet'], default='mnist')
 parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--epochs', type=str, default="80,60,40,20")
 parser.add_argument('--tol', type=float, default=1e-3)
@@ -68,18 +68,18 @@ def get_tiny_imagenet_loaders():
         transforms.RandomCrop(64, padding=6),
         transforms.ToTensor(),
     ])
-    transform_test = transform.Compose([
+    transform_test = transforms.Compose([
         transforms.ToTensor(),
     ])
     train_loader = DataLoader(
-        datasets.ImageFolder(root='~/data/Tiny-ImageNet/train', 
+        datasets.ImageFolder(root='/home/luinx/data/Tiny-ImageNet/train', 
             transform=transform_train),
-        batch_size=128, shuffle=True, num_workers=2, drop_last=True
+        batch_size=100, shuffle=True, num_workers=2, drop_last=True
     )
     test_loader = DataLoader(
-        datasets.ImageFolder(root='~/data/Tiny-ImageNet/val',
+        datasets.ImageFolder(root='/home/luinx/data/Tiny-ImageNet/val',
             transform=transform_test),
-        batch_size=128, shuffle=False, num_workers=2, drop_last=True
+        batch_size=100, shuffle=False, num_workers=2, drop_last=True
     )
     return train_loader, test_loader
 
@@ -123,10 +123,13 @@ if __name__ == '__main__':
         model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_mnist_loaders()
     elif args.data == "tiny-imagenet":
-        model = SdeClassifier(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_tiny_imagenet_loaders()
     else:
         raise ValueError
+    
+    model = nn.DataParallel(model)
+    
     loss = nn.CrossEntropyLoss()
     epochs = [int(k) for k in args.epochs.split(',')]
     epoch_counter = 0
@@ -141,4 +144,4 @@ if __name__ == '__main__':
             print(f"[Epoch={epoch_counter}] Train: {train_acc:.3f}, "
                     f"Test: {test_acc:.3f}")
             # save model
-            torch.save(model.state_dict(), f"./ckpt/sde_{args.data}_{args.sigma}_{args.noise_type}.pth")
+            torch.save(model.module.state_dict(), f"./ckpt/sde_{args.data}_{args.sigma}_{args.noise_type}.pth")

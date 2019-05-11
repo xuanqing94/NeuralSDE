@@ -2,12 +2,12 @@
 
 #./sde_classifier.py --data cifar10 --sigma 0.5 > ./log_sde_cifar10_0.5.txt
 
-device=1
-for s in 0.5 0.6 0.7 0.8 0.9
+device=0,1,2,3
+for s in 0
 do
-	data=cifar10
+	data=tiny-imagenet
 	sigma=$s
-	noise_type=dropout
+	noise_type=multiplicative
 	#epochs=20,20,10
 	epochs=40,40,20,20
 	echo Training with sigma=${sigma}
@@ -17,6 +17,6 @@ do
 		--sigma $sigma \
 		--epochs $epochs \
 		--noise_type $noise_type \
-		> >(tee ./log/log_sde_${data}_${sigma}_${noise_type}.txt) &
+		> >(tee ./log/log_sde_${data}_${sigma}_${noise_type}.txt) 
 	device=$((device+1))
 done

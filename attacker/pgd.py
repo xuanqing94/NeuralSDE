@@ -43,7 +43,8 @@ def L2_PGD(x_in, y_true, net, steps, eps, num_avg):
         net.eval()
 
     x_adv = x_in.clone().requires_grad_()
-    lr = 1.5 * eps / steps / num_avg
+    #lr = 1.5 * eps / steps / num_avg
+    lr = 0.005 / num_avg
     optimizer = Adam([x_adv], lr=lr)
     eps = torch.tensor(eps).to(x_in)
 

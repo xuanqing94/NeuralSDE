@@ -105,6 +105,7 @@ for eps in opt.max_norm:
     correct = 0
     total = 0
     max_iter = 40
+    #max_iter = 1   # for debugging
     distortion = 0
     batch = 0
     for it, (x, y) in enumerate(testloader):
