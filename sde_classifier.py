@@ -11,7 +11,7 @@ from models.sde_model import SdeClassifier, SdeClassifier_big
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type=str, choices=['resnet', 'odenet'], default='odenet')
-parser.add_argument('--data', type=str, choices=['cifar10', 'mnist', 'tiny-imagenet'], default='mnist')
+parser.add_argument('--data', type=str, choices=['cifar10', 'stl10', 'mnist', 'tiny-imagenet'], default='mnist')
 parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--epochs', type=str, default="80,60,40,20")
 parser.add_argument('--tol', type=float, default=1e-3)
@@ -62,6 +62,27 @@ def get_cifar_loaders():
         shuffle=False, num_workers=2, drop_last=True
     )
     return train_loader, test_loader
+
+def get_stl_loaders():
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(96, padding=8),
+        transforms.ToTensor(),
+    ])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    train_loader = DataLoader(
+        datasets.STL10(root='~/data/stl10', split='train',
+            download=True, transform=transform_train), batch_size=64,
+        shuffle=True, num_workers=2, drop_last=True
+    )
+    test_loader = DataLoader(
+        datasets.STL10(root='~/data/stl10', split='test',
+            download=True, transform=transform_test), batch_size=64,
+        shuffle=False, num_workers=2, drop_last=True
+    )
+    return train_loader, test_loader
+
 
 def get_tiny_imagenet_loaders():
     transform_train = transforms.Compose([
@@ -122,6 +143,9 @@ if __name__ == '__main__':
     elif args.data == "mnist":
         model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_mnist_loaders()
+    elif args.data == "stl10":
+        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        train_loader, test_loader = get_stl_loaders()
     elif args.data == "tiny-imagenet":
         model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_tiny_imagenet_loaders()
