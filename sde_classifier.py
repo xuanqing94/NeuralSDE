@@ -144,10 +144,10 @@ if __name__ == '__main__':
         model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_mnist_loaders()
     elif args.data == "stl10":
-        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type, n_class=10).cuda()
         train_loader, test_loader = get_stl_loaders()
     elif args.data == "tiny-imagenet":
-        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type, n_class=200).cuda()
         train_loader, test_loader = get_tiny_imagenet_loaders()
     else:
         raise ValueError

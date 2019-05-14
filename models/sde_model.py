@@ -178,7 +178,7 @@ class SdeClassifier(nn.Module):
         return self.model(x)
 
 class SdeClassifier_big(nn.Module):
-    def __init__(self, in_nc, sigma, mid_state, grid=0.1, noise_type="additive"):
+    def __init__(self, in_nc, sigma, mid_state, grid=0.1, noise_type="additive", n_class=200):
         super(SdeClassifier_big, self).__init__()
         self.mid_state = mid_state
         self.downsampling_layers = [
@@ -200,7 +200,7 @@ class SdeClassifier_big(nn.Module):
             raise ValueError
         self.feature_layers = [SDEBlock(sde_fn(256, sigma), self.mid_state, grid)]
         self.fc_layers = [norm(256), nn.ReLU(inplace=True),
-                nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(256, 200)]
+                nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(256, n_class)]
         self.model = nn.Sequential(*self.downsampling_layers, *self.feature_layers,
                 *self.fc_layers)
         #self.model = nn.Sequential(*self.downsampling_layers,

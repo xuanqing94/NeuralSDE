@@ -12,7 +12,7 @@ from torch.optim import SGD
 import torchvision
 import torchvision.transforms as transforms
 # models
-from models.sde_model import SdeClassifier
+from models.sde_model import SdeClassifier, SdeClassifier_big
 # adversarial algorithm
 from attacker.pgd import Linf_PGD, L2_PGD
 
@@ -48,7 +48,8 @@ if opt.data == 'cifar10':
         transforms.ToTensor(),
     ])
     testset = torchvision.datasets.CIFAR10(root='~/data/cifar10-py', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=opt.batch_size, shuffle=False, num_workers=2)
+    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type)
 elif opt.data == "mnist":
     nclass = 10
     img_width = 28
@@ -57,20 +58,33 @@ elif opt.data == "mnist":
         transforms.ToTensor(),
     ])
     testset = torchvision.datasets.MNIST(root='/home/luinx/data/mnist', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=opt.batch_size, shuffle=False, num_workers=2)
+    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type)
+elif opt.data == "stl10":
+    nclass = 10
+    img_width = 96
+    in_nc = 3
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    testset = torchvision.datasets.STL10(root='~/data/stl10', split='test', download=False, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=opt.batch_size, shuffle=False, num_workers=2)
+    net = SdeClassifier_big(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type, n_class=nclass)
+elif opt.data == "tiny-imagenet":
+    nclass = 300
+    img_width = 64
+    in_nc = 3
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    testset = torchvision.datasets.ImageFolder(root='/home/luinx/data/Tiny-ImageNet/val',
+            transform=transform_test)
+    net = SdeClassifier_big(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type, n_class=nclass)
 else:
     raise ValueError(f'invlid dataset: {opt.data}')
 
 # load model
-if opt.model == 'ode':
-    net = OdeClassifier(in_nc)
-    f = f'./ckpt/ode_{opt.data}.pth'
-elif opt.model == 'sde':
-    net = SdeClassifier(in_nc, opt.test_sigma, mid_state=None, noise_type=opt.noise_type)
-    f = f'./ckpt/sde_{opt.data}_{opt.sigma}_{opt.noise_type}.pth'
-else:
-    raise ValueError('invalid opt.model')
-
+f = f'./ckpt/sde_{opt.data}_{opt.sigma}_{opt.noise_type}.pth'
 print(f"Loading model from file {f}")
 net.load_state_dict(torch.load(f))
 net.cuda()
