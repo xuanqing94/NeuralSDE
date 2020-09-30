@@ -55,7 +55,7 @@ def get_snr(states1, states2):
 if __name__ == "__main__":
     # load model
     net = SdeClassifier(in_nc, test_sigma, None, args.step_size, args.noise_type)
-    f = f'./ckpt/sde_{data}_{sigma}.pth'
+    f = f'./ckpt/sde_{data}_{sigma}_{args.noise_type}.pth'
     net.load_state_dict(torch.load(f))
     net.cuda()
     net.eval()

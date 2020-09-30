@@ -14,11 +14,12 @@ parser.add_argument('--network', type=str, choices=['resnet', 'odenet'], default
 parser.add_argument('--data', type=str, choices=['cifar10', 'stl10', 'mnist', 'tiny-imagenet'], default='mnist')
 parser.add_argument('--sigma', type=float, default=0.0)
 parser.add_argument('--epochs', type=str, default="80,60,40,20")
-parser.add_argument('--tol', type=float, default=1e-3)
+parser.add_argument('--grid_size', type=float, default=1e-1)
 parser.add_argument('--adjoint', type=eval, default=False, choices=[True, False])
 parser.add_argument('--lr', type=float, default=0.1)
 parser.add_argument('--save', type=str, default='./experiment1')
 parser.add_argument('--noise_type', type=str, default='additive')
+parser.add_argument('--model_size', action='store_true')
 args = parser.parse_args()
 
 from sdeint.euler import sdeint_euler
@@ -105,7 +106,7 @@ def get_tiny_imagenet_loaders():
     return train_loader, test_loader
 
 
-def train_one_epoch(loader, model, optimizer, loss_f):
+def train_one_epoch(loader, model, optimizer, loss_f, kwargs):
     model.train()
     total = 0
     correct = 0
@@ -113,7 +114,7 @@ def train_one_epoch(loader, model, optimizer, loss_f):
         # forward / backward
         x, y = x.cuda(), y.cuda()
         optimizer.zero_grad()
-        output = model(x)
+        output = model(x, kwargs)
         loss = loss_f(output, y)
         loss.backward()
         optimizer.step()
@@ -122,7 +123,7 @@ def train_one_epoch(loader, model, optimizer, loss_f):
         total += y.numel()
     return correct / total
 
-def test_one_epoch(loader, model, optimizer, loss_f):
+def test_one_epoch(loader, model, optimizer, loss_f, kwargs):
     model.eval()
     total = 0
     correct = 0
@@ -130,7 +131,7 @@ def test_one_epoch(loader, model, optimizer, loss_f):
         # forward / backward
         x, y = x.cuda(), y.cuda()
         with torch.no_grad():
-            output = model(x)
+            output = model(x, kwargs)
         # gather stats
         correct += y.eq(torch.max(output, dim=1)[1]).sum().item()
         total += y.numel()
@@ -138,7 +139,7 @@ def test_one_epoch(loader, model, optimizer, loss_f):
 
 if __name__ == '__main__':
     if args.data == "cifar10":
-        model = SdeClassifier(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
+        model = SdeClassifier(in_nc=3,  noise_type=args.noise_type).cuda()
         train_loader, test_loader = get_cifar_loaders()
     elif args.data == "mnist":
         model = SdeClassifier(in_nc=1, sigma=args.sigma, mid_state=None, noise_type=args.noise_type).cuda()
@@ -150,10 +151,14 @@ if __name__ == '__main__':
         model = SdeClassifier_big(in_nc=3, sigma=args.sigma, mid_state=None, noise_type=args.noise_type, n_class=200).cuda()
         train_loader, test_loader = get_tiny_imagenet_loaders()
     else:
-        raise ValueError
-    
-    model = nn.DataParallel(model)
-    
+        raise ValueError 
+    if args.model_size:
+        n_params = 0
+        for t in model.parameters():
+            n_params += t.numel()
+        print(f"===> Total number of params: {n_params}")
+        exit(-1)
+    kwargs = {'logits': True, 'sigma': args.sigma, 'T': 1, 'grid': args.grid_size}
     loss = nn.CrossEntropyLoss()
     epochs = [int(k) for k in args.epochs.split(',')]
     epoch_counter = 0
@@ -163,9 +168,9 @@ if __name__ == '__main__':
         args.lr /= 10
         for k in range(epoch):
             epoch_counter += 1
-            train_acc = train_one_epoch(train_loader, model, optimizer, loss)
-            test_acc = test_one_epoch(test_loader, model, optimizer, loss)
+            train_acc = train_one_epoch(train_loader, model, optimizer, loss, kwargs)
+            test_acc = test_one_epoch(test_loader, model, optimizer, loss, kwargs)
             print(f"[Epoch={epoch_counter}] Train: {train_acc:.3f}, "
                     f"Test: {test_acc:.3f}")
             # save model
-            torch.save(model.module.state_dict(), f"./ckpt/sde_{args.data}_{args.sigma}_{args.noise_type}.pth")
+            torch.save(model.state_dict(), f"./ckpt_error_analysis/sde_{args.data}_{args.sigma}_{args.noise_type}.pth")

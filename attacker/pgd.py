@@ -6,13 +6,14 @@ from torch.optim import Adam, SGD
 
 # performs Linf-constraint PGD attack w/o noise
 # @epsilon: radius of Linf-norm ball
-def Linf_PGD(x_in, y_true, net, steps, eps, num_avg):
+def Linf_PGD(x_in, y_true, net, steps, eps, num_avg=1):
     if eps == 0:
         return x_in
     training = net.training
     if training:
         net.eval()
     x_adv = x_in.clone().requires_grad_()
+    # NOTE we do multiple forward-backward, so lr should be divided by num_avg
     optimizer = Linf_SGD([x_adv], lr=0.007 / num_avg)
     for _ in range(steps):
         optimizer.zero_grad()
@@ -34,7 +35,7 @@ def Linf_PGD(x_in, y_true, net, steps, eps, num_avg):
 
 
 
-def L2_PGD(x_in, y_true, net, steps, eps, num_avg):
+def L2_PGD(x_in, y_true, net, steps, eps, num_avg=1):
     if eps == 0:
         return x_in
 
@@ -44,7 +45,7 @@ def L2_PGD(x_in, y_true, net, steps, eps, num_avg):
 
     x_adv = x_in.clone().requires_grad_()
     #lr = 1.5 * eps / steps / num_avg
-    lr = 0.005 / num_avg
+    lr = (2 * eps / steps) / num_avg
     optimizer = Adam([x_adv], lr=lr)
     eps = torch.tensor(eps).to(x_in)
 
